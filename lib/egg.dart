@@ -14,9 +14,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Audio audio = Audio.load('assets/audios/alarm.mp3');
   int _countdownSeconds = 0;
   bool _isCountingDown = false;
-  Timer? _countdownTimer; 
-  
-  
+  Timer? _countdownTimer;
 
   void _startCountdown(int seconds) {
     
@@ -76,8 +74,6 @@ void _cancelCountdown() {
     );
   }
 
-
-  
   void _playAlarm() async {
     await audio.play();
     await _showDialog(); // Süre bittiğinde pencereyi göster
