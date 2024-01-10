@@ -64,7 +64,6 @@ void _cancelCountdown() {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                
               },
               child: const Text('Tamam'),
             ),
@@ -126,6 +125,7 @@ void _cancelCountdown() {
                   children: [
           
                     Padding(
+                      
                       padding: const EdgeInsets.all(4.0),
                       child: ElevatedButton(
                         onPressed: () =>
