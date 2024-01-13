@@ -29,6 +29,7 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   audiofileplayer: ^2.1.1
+  percent_indicator: ^4.2.3
   flutter:
     sdk: flutter
 

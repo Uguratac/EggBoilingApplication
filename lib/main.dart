@@ -10,7 +10,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return  MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Yumurta Haşlama Zamanlayıcısı',
+      title: 'Eggy',
       theme: ThemeData(
         appBarTheme: const AppBarTheme(backgroundColor: Colors.blue),
       ),

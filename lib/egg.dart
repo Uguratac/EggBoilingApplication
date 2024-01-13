@@ -1,53 +1,98 @@
 import 'dart:async';
 import 'package:audiofileplayer/audiofileplayer.dart';
+import 'package:egg_application/indicator.dart';
 import 'package:flutter/material.dart';
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key});
+  const MyHomePage({Key? key}) : super(key: key);
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
+  late Audio audio; // ses dosyasını kullanmak için
+  late int _countdownSeconds; // kalan süre
+  late bool _isCountingDown; // geri sayım devam ediyor mu etmiyor mu
+  Timer? _countdownTimer; // geri sayım
+  int _selectedButtonIndex = 0; // seçilen butonun indexi
 
-  Audio audio = Audio.load('assets/audios/alarm.mp3');
-  int _countdownSeconds = 0;
-  bool _isCountingDown = false;
-  Timer? _countdownTimer;
+  late List<AnimationController> _animationControllers; // animasyon için
+  late List<Animation<double>> _animations;
+  late List<bool> _isAnimatingList;
+
+  @override
+  void initState() {
+    super.initState();
+
+    audio = Audio.load('assets/audios/alarm.mp3');
+    _countdownSeconds = 0;
+    _isCountingDown = false;
+
+    _animationControllers = List.generate(
+      4,
+      (index) => AnimationController(
+        vsync: this,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    _animations = _animationControllers
+        .map((controller) =>
+            Tween<double>(begin: 1.2, end: 1.5).animate(controller))
+        .toList();
+
+    _isAnimatingList = List.generate(4, (index) => false);
+  }
+
+  void _toggleAnimation(int index) {
+    if (_isAnimatingList[index]) {
+      if (_countdownSeconds == 0) {
+        _animationControllers[index].reverse();
+      }
+    } else {
+      _animationControllers[index].forward();
+    }
+
+    setState(() {
+      _isAnimatingList[index] = !_isAnimatingList[index];
+      _selectedButtonIndex = index; // Seçili butonun indeksini güncelledik
+    });
+    int seconds = (2 * index + 5) * 60;
+    _startCountdown(seconds);
+  }
 
   void _startCountdown(int seconds) {
-    
-  if (_isCountingDown) {
-    // Halihazırda devam eden bir geri sayım varsa, yenisine başlamadan önce eski geri sayımı iptal eder
-    _cancelCountdown();
-  }
+    if (_isCountingDown) {
+      _cancelCountdown();
+    }
 
-  setState(() {
-    _countdownSeconds = seconds;
-    _isCountingDown = true;
-  });
-
-  _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
     setState(() {
-      if (_countdownSeconds > 0) {
-        _countdownSeconds--;
-      } else {
-        _isCountingDown = false;
-        _cancelCountdown();
-        _playAlarm();
-      }
+      _countdownSeconds = seconds;
+      _isCountingDown = true;
     });
-  });
-}
 
-void _cancelCountdown() {
-  if (_countdownTimer != null) {
-    _countdownTimer!.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_countdownSeconds > 0) {
+          _countdownSeconds--;
+        } else {
+          _isCountingDown = false;
+          _cancelCountdown();
+          _playAlarm();
+          _showDialog();
+        }
+      });
+    });
   }
-}
 
- Future<void> _showDialog() async {
+  void _cancelCountdown() {
+    if (_countdownTimer != null) {
+      _countdownTimer!.cancel();
+    }
+  }
+
+  Future<void> _showDialog() async {
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
@@ -75,7 +120,14 @@ void _cancelCountdown() {
 
   void _playAlarm() async {
     await audio.play();
-    await _showDialog(); // Süre bittiğinde pencereyi göster
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _animationControllers) {
+      controller.dispose();
+    }
+    super.dispose();
   }
 
   @override
@@ -86,144 +138,121 @@ void _cancelCountdown() {
         centerTitle: true,
         backgroundColor: Colors.teal,
       ),
-
       body: Container(
         decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/images/background.jpg")
-          )
-        ),
+            image: DecorationImage(
+                image: AssetImage("assets/images/background.jpg"),
+                fit: BoxFit.cover)),
+        child: Column(
+          //mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            MyIndicator(
+                isCountingDown: _isCountingDown,
+                countdownSeconds: _countdownSeconds,
+                buttonIndex: _selectedButtonIndex),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.all(10),
+              height: 50,
+              decoration: const BoxDecoration(
+                  color: Colors.amber,
+                  borderRadius: BorderRadius.all(Radius.circular(20))),
+              child: Text(
+                _isCountingDown
+                    ? "Yumurtanız Haşlanmaya Başladı"
+                    : "Haşlamak istediğiniz Yumurtayı Seçiniz",
+                style: const TextStyle(fontSize: 18.0),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(
+              height: 30.0,
+              width: double.infinity,
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                for (int i = 0; i <= 3; i++)
+                  GestureDetector(
+                    onTap: () {
+                      _toggleAnimation(i);
+                      _startCountdown((2 * i + 5) * 60);
 
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Center(
-          
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Container(
-                  width: double.infinity,
-                  height: 50,
-                  
-                  decoration: const  BoxDecoration(
-                    color: Colors.amber,
-                    borderRadius: BorderRadius.all(Radius.circular(20))
+                      // Diğer butonların animasyonunu tersine çevir
+                      for (int j = 0; j <= 3; j++) {
+                        if (j != i && _isAnimatingList[j]) {
+                          _animationControllers[j].reverse();
+                          _isAnimatingList[j] = false;
+                        }
+                      }
+                    },
+                    child: AnimatedBuilder(
+                      animation: _animationControllers[i],
+                      builder: (context, child) {
+                        return Transform.scale(
+                          scale: _isCountingDown ? _animations[i].value : 1.2,
+                          child: const EggPhoto(),
+                        );
+                      },
+                    ),
                   ),
-          
-                  child: Text(
-                    _isCountingDown
-                        ? 'Kalan Süre: $_countdownSeconds saniye'
-                        : 'Lütfen Haşlamak İstediğiniz Yumurtayı seçiniz',
-                    style: const TextStyle(fontSize: 18.0),textAlign: TextAlign.center,
-                  ),
-                ),
-          
-                const SizedBox(height: 30.0,width: double.infinity,),
-          
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-          
-                    Padding(
-                      
-                      padding: const EdgeInsets.all(4.0),
-                      child: ElevatedButton(
-                        onPressed: () =>
-                            _startCountdown(3 * 60), // 3 dakika
-                        child: EggPhoto(path: ImageItems.three),
-                      ),
-                    ),
-          
-                    Padding(
-                      padding: const EdgeInsets.all(4.0),
-                      child: ElevatedButton(
-                        onPressed: () =>
-                            _startCountdown(5 * 60), // 5 dakika
-                        child: EggPhoto(path: ImageItems.five),
-                      ),
-                    ),
-                    
-                   Padding(
-                      padding: const EdgeInsets.all(4.0),
-                      child: ElevatedButton(
-                        onPressed: () =>
-                            _startCountdown(7 * 60), // 7 dakika
-                        child: EggPhoto(path: ImageItems.seven),
-                      ),
-                    ),
-                  ],
-                ),
-          
-                const SizedBox(width: double.infinity,height: 50,),          
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                  Padding(
-                      padding: const EdgeInsets.all(4.0),
-                      child: ElevatedButton(
-                        onPressed: () =>
-                            _startCountdown(9 * 60), // 9 dakika
-                        child: EggPhoto(path: ImageItems.nine),
-                      ),
-                    ),
-          
-                    Padding(
-                      padding: const EdgeInsets.all(4.0),
-                      child: ElevatedButton(
-                        onPressed: () =>
-                            _startCountdown(11 * 60), // 11 dakika
-                        child: EggPhoto(path: ImageItems.eleven),
-                      ),
-                    ),
-          
-                    Padding(
-                      padding: const EdgeInsets.all(4.0),
-                      child: ElevatedButton(
-                        onPressed: () =>
-                            _startCountdown(13 * 60), // 13 dakika
-                        child: EggPhoto(path: ImageItems.thirteen),
-                      ),
-                    ),
-          
-                ],),
               ],
             ),
-          ),
+            const SizedBox(
+              width: double.infinity,
+              height: 30,
+            ),
+            const MyMin(),
+          ],
         ),
       ),
     );
   }
 }
 
-// ignore: must_be_immutable
-class EggPhoto extends StatelessWidget {
-  EggPhoto({
-    required String this.path,
+class MyMin extends StatelessWidget {
+  const MyMin({
     super.key,
   });
 
-  String? path;
-
   @override
   Widget build(BuildContext context) {
-    return Container( 
-      width: 65,
-      height: 70,
-      decoration: BoxDecoration(
-        border: Border.all(width: 5),
-        borderRadius: const BorderRadius.all(Radius.elliptical(20.0,10.0)),
-      ),
-      child: Image.asset(path!,fit: BoxFit.cover,),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        for (int i = 0; i <= 3; i++)
+          Container(
+            width: 70,
+            height: 50,
+            decoration: const BoxDecoration(
+                color: Colors.amber,
+                borderRadius: BorderRadius.all(
+                  Radius.elliptical(20, 20),
+                )),
+            child: Center(child: Text("${(2 * i + 5)} DK")),
+          )
+      ],
     );
   }
 }
 
-class ImageItems{
-  static String three = 'assets/images/3.png';
-  static String five = 'assets/images/5.png';
-  static String seven = 'assets/images/7.png';
-  static String nine = 'assets/images/9.png';
-  static String eleven = 'assets/images/11.png';
-  static String thirteen = 'assets/images/13.png';
-
+class EggPhoto extends StatelessWidget {
+  const EggPhoto({Key? key}) : super(key: key);
+  @override
+  Widget build(BuildContext context) {
+    double screenWidth = MediaQuery.of(context).size.width;
+    return Container(
+      width: screenWidth / 6.0,
+      height: screenWidth / 5.0,
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage('assets/images/Icon2.png'),
+          fit: BoxFit.cover,
+        ),
+      ),
+    );
+  }
 }
