@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:audiofileplayer/audiofileplayer.dart';
-import 'package:egg_application/indicator.dart';
+import 'package:egg_application/constants/constans.dart';
+import 'package:egg_application/pages/indicator.dart';
 import 'package:flutter/material.dart';
 
 class MyHomePage extends StatefulWidget {
@@ -15,7 +16,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   late int _countdownSeconds; // kalan süre
   late bool _isCountingDown; // geri sayım devam ediyor mu etmiyor mu
   Timer? _countdownTimer; // geri sayım
-  int _selectedButtonIndex = 0; // seçilen butonun indexi
+  int seconds = 0;
 
   late List<AnimationController> _animationControllers; // animasyon için
   late List<Animation<double>> _animations;
@@ -25,7 +26,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
 
-    audio = Audio.load('assets/audios/alarm.mp3');
+    audio = Audio.load(Constants.alarm);
     _countdownSeconds = 0;
     _isCountingDown = false;
 
@@ -56,10 +57,13 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
     setState(() {
       _isAnimatingList[index] = !_isAnimatingList[index];
-      _selectedButtonIndex = index; // Seçili butonun indeksini güncelledik
     });
-    int seconds = (2 * index + 5) * 60;
+    seconds = calculateSeconds(index);
     _startCountdown(seconds);
+  }
+
+  int calculateSeconds(int index) {
+    return (2 * index + 5) * 60;
   }
 
   void _startCountdown(int seconds) {
@@ -97,11 +101,11 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Yumurtalar Hazır!'),
-          content: const SingleChildScrollView(
+          title: Text(Constants.hazir),
+          content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
-                Text('Afiyet olsun!'),
+                Text(Constants.afiyet),
               ],
             ),
           ),
@@ -136,21 +140,20 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       appBar: AppBar(
         title: const Text('Yumurta Haşlama Zamanlayıcısı'),
         centerTitle: true,
-        backgroundColor: Colors.teal,
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
             image: DecorationImage(
-                image: AssetImage("assets/images/background.jpg"),
-                fit: BoxFit.cover)),
+                image: AssetImage(Constants.bg), fit: BoxFit.cover)),
         child: Column(
           //mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
             MyIndicator(
-                isCountingDown: _isCountingDown,
-                countdownSeconds: _countdownSeconds,
-                buttonIndex: _selectedButtonIndex),
+              isCountingDown: _isCountingDown,
+              countdownSeconds: _countdownSeconds,
+              second: seconds,
+            ),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(10),
@@ -178,7 +181,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                   GestureDetector(
                     onTap: () {
                       _toggleAnimation(i);
-                      _startCountdown((2 * i + 5) * 60);
+                      _startCountdown(calculateSeconds(i));
 
                       // Diğer butonların animasyonunu tersine çevir
                       for (int j = 0; j <= 3; j++) {
@@ -232,11 +235,15 @@ class MyMin extends StatelessWidget {
                 borderRadius: BorderRadius.all(
                   Radius.elliptical(20, 20),
                 )),
-            child: Center(child: Text("${(2 * i + 5)} DK")),
+            child: Center(child: Text("${minute(i)} DK")),
           )
       ],
     );
   }
+}
+
+int minute(int i) {
+  return 2 * i + 5;
 }
 
 class EggPhoto extends StatelessWidget {
